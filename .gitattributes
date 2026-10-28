@@ -1,0 +1,7 @@
+* text=auto
+*.cpp text eol=crlf
+*.h text eol=crlf
+*.inl text eol=crlf
+*.md text eol=lf
+*.png binary
+*.ico binary

@@ -1,0 +1,15 @@
+/build*/
+/out/
+/.vs/
+/.vscode/
+CMakeUserPresets.json
+*.log
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+*.dp64
+*.user
+KozDbg.dp64.ini*
+*.backup-*
