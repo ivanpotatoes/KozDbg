@@ -591,7 +591,7 @@ static void callback(CBTYPE type,void* info) {
  }
 }
 extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
- pluginHandle=init->pluginHandle;init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=14;
+ pluginHandle=init->pluginHandle;init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=100;
  strcpy_s(init->pluginName,"KozDbg");
  wchar_t file[MAX_PATH];GetModuleFileNameW(instance,file,MAX_PATH);iniPath=file;iniPath+=L".ini";logPath=file;logPath+=L".log";
  enabled=GetPrivateProfileIntW(L"Settings",L"Enabled",1,iniPath.c_str())!=0;
@@ -612,7 +612,7 @@ extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
  _plugin_registercommand(pluginHandle,"kz_settings",settings,false);
  _plugin_registercommand(pluginHandle,"kz_status",status,false);
  for(auto t:{CB_MENUENTRY,CB_SYSTEMBREAKPOINT,CB_INITDEBUG,CB_STOPPINGDEBUG,CB_STOPDEBUG,CB_DETACH,CB_EXITPROCESS,CB_EXITTHREAD,CB_EXCEPTION,CB_DEBUGEVENT,CB_LOADDLL,CB_UNLOADDLL,CB_BREAKPOINT})_plugin_registercallback(pluginHandle,t,callback);
- log("Loaded v0.14 - 3.3.1 / 3.4.0 / 3.5.0 / 3.6 / 3.8.0 / 3.9.4 / 3.10.1 x64 profiles. Settings are in Plugins > KozDbg.");return true;
+ log("Loaded v1.0 - 3.3.1 / 3.4.0 / 3.5.0 / 3.6 / 3.8.0 / 3.9.4 / 3.10.1 x64 profiles. Settings are in Plugins > KozDbg.");return true;
 }
 extern "C" __declspec(dllexport) void plugsetup(PLUG_SETUPSTRUCT* setup){
  owner=setup->hwndDlg;

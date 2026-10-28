@@ -32,7 +32,7 @@ The video shows BasicProbe, RiddleGame and KeyCheck being protected with differe
 
 ## Installation
 
-1. Build `KozDbg.dp64` using the instructions below.
+1. Download `KozDbg.dp64` from [Releases](https://github.com/ivanpotatoes/KozDbg/releases/latest), or build it using the instructions below.
 2. Copy it into the `plugins` directory next to `x64dbg.exe`.
 3. Start x64dbg and open **Plugins > KozDbg**.
 4. Select the matching VMProtect profile and leave **Auto-enable** checked.
