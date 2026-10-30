@@ -3,6 +3,7 @@ static std::vector<duint> syscallSites;
 static std::vector<duint> guardedSites;
 struct HardwareSyscall {duint address=0;unsigned slot=4;};
 static std::vector<HardwareSyscall> hardwareSyscalls;
+static KozHardwareStatus hardwareStatus;
 static bool ownedHardware(duint address) {
  BRIDGEBP bp{};return address&&DbgFunctions()->GetBridgeBp(bp_hardware,address,&bp)&&
   strncmp(bp.name,"KZ_FAST_",8)==0&&strcmp(bp.commandText,"kz_syscall")==0;
@@ -46,12 +47,13 @@ static bool addHardwareSyscall(duint address) {
   bp.slot<4&&!(occupied&(1u<<bp.slot))&&bp.enabled&&!bp.fastResume&&bp.silent&&ownedHardware(address)&&
   strcmp(bp.breakCondition,"0")==0&&strcmp(bp.commandCondition,"1")==0;
  if(!ok){cmd("bphc "+a);log("Decoder hardware setup failed; retaining memory guards.");return false;}
- hardwareSyscalls.push_back({address,bp.slot});
+ hardwareSyscalls.push_back({address,bp.slot});hardwareStatus.set(address,bp.slot);
  ++hits[12];logf("[KozDbg] Decoder-page syscall %p uses free DR%u; all other sites retain memory guards.\n",(void*)address,bp.slot);
  return true;
 }
 struct TfGuardWindow {DWORD thread;duint exceptionAddress;std::vector<duint> sites;};
 static std::vector<TfGuardWindow> tfGuardWindows;
+static std::atomic<unsigned> tfGuardStatus{0};
 static duint pebByte=0,remoteBreakin=0;
 static unsigned char savedPebByte=0;
 static DWORD advancedPid=0;
@@ -120,7 +122,7 @@ static bool preserveHardwareContext() {
   std::array<duint,4> dr{context.Dr0,context.Dr1,context.Dr2,context.Dr3};
   if(dr[slot]&&dr[slot]!=hardware.address){
    if(!addGuard(hardware.address)||!cmd("bphc "+hex(hardware.address)))return false;
-   hardwareSyscalls.erase(hardwareSyscalls.begin()+i);
+   hardwareStatus.erase(hardware.address);hardwareSyscalls.erase(hardwareSyscalls.begin()+i);
    log("Context uses a borrowed DR slot; that syscall returned to memory guarding.");continue;
   }
   const duint enableMask=duint(3)<<(slot*2),kindMask=duint(15)<<(16+slot*4);
@@ -138,7 +140,7 @@ static bool restoreTfGuards(DWORD thread,duint exceptionAddress) {
   if(it->thread!=thread||(exceptionAddress&&it->exceptionAddress!=exceptionAddress)){++it;continue;}
   for(auto site:it->sites)if(!ownedGuard(site)&&!addGuard(site))return false;
   infof("TF syscall guards restored","[KozDbg] Restored %u syscall guards after TF delivery for tid=%X\n",static_cast<unsigned>(it->sites.size()),thread);
-  it=tfGuardWindows.erase(it);
+  it=tfGuardWindows.erase(it);tfGuardStatus=static_cast<unsigned>(tfGuardWindows.size());
  }
  return true;
 }
@@ -163,7 +165,7 @@ static bool prepareTfWindow(duint returnAddress) {
  TfGuardWindow window{thread,trap,{}};
  for(auto site:guardedSites)if(site/system.dwPageSize>=firstPage&&site/system.dwPageSize<=lastPage&&ownedGuard(site))window.sites.push_back(site);
  if(window.sites.empty())return true;
- tfGuardWindows.push_back(window);
+ tfGuardWindows.push_back(window);tfGuardStatus=static_cast<unsigned>(tfGuardWindows.size());
  // PAGE_GUARD's own single stepping can consume the target's TF exception.
  // Release only our syscall ranges on these pages until that real exception
  // reaches RtlDispatchException; then restore the ranges before the filter.
@@ -245,7 +247,7 @@ static bool scanSyscalls() {
    if(complete){logf("[KozDbg] Decoder page %p: all %u candidates use hardware breakpoints.\n",(void*)page,static_cast<unsigned>(pageSites.size()));break;}
    // Partial coverage would leave PAGE_GUARD on the hot page anyway.
    for(const auto& hardware:hardwareSyscalls)if(ownedHardware(hardware.address)&&!cmd("bphc "+hex(hardware.address))){log("Cannot roll back partial decoder acceleration; stopping setup.");return false;}
-   hardwareSyscalls.clear();log("Not enough safe hardware slots for the complete decoder page; retaining memory coverage.");
+   hardwareSyscalls.clear();hardwareStatus.clear();log("Not enough safe hardware slots for the complete decoder page; retaining memory coverage.");
   }
  }
  for(auto site:syscallSites){
@@ -351,13 +353,14 @@ static bool disarmDirect() {
    }
   }
   complete=kozRetryCleanup(hardwareSyscalls,[](const HardwareSyscall& hardware){
-   if(!ownedHardware(hardware.address))return true;
-   return cmd("bphc "+hex(hardware.address))&&!ownedHardware(hardware.address);
+   if(!ownedHardware(hardware.address)){hardwareStatus.erase(hardware.address);return true;}
+   const bool removed=cmd("bphc "+hex(hardware.address))&&!ownedHardware(hardware.address);
+   if(removed)hardwareStatus.erase(hardware.address);return removed;
   })&&complete;
  }
  if(!complete)return false;
- hardwareSyscalls.clear();
- guardedSites.clear();syscallSites.clear();savedContexts.clear();tfGuardWindows.clear();pebByte=0;remoteBreakin=0;advancedPid=0;
+ hardwareSyscalls.clear();hardwareStatus.clear();
+ guardedSites.clear();syscallSites.clear();savedContexts.clear();tfGuardWindows.clear();tfGuardStatus=0;pebByte=0;remoteBreakin=0;advancedPid=0;
  return true;
 }
 static bool emulateQuery(duint process,duint infoClass,duint buffer,duint size,duint returnLength,duint& result) {

@@ -18,6 +18,7 @@
 #include <mutex>
 #include "retry_cleanup.h"
 #include "profile_transition.h"
+#include "status_snapshot.h"
 
 namespace R = Script::Register;
 namespace M = Script::Module;
@@ -46,7 +47,7 @@ static bool extendedChecks(){return profile().extended;}
 static constexpr unsigned controlCount=13;
 static std::atomic<unsigned> mask{8191};
 static std::array<std::atomic<unsigned>,controlCount> hits{};
-static std::array<unsigned,13> apiSeen{};
+static std::array<std::atomic<unsigned>,13> apiSeen{};
 static std::vector<duint> owned;
 static bool setupDone;
 static HWND settingsWindow;
@@ -426,7 +427,7 @@ static bool hit(int argc,char** argv) {
    char caller[MAX_MODULE_SIZE]{};
    if(!M::NameFromAddr(ra,caller))strcpy_s(caller,"unmapped/private");
    logf("[KozDbg] API %d hit=%u tid=%X pc=%p caller=%s:%p rsp=%p rcx=%p rdx=%p\n",
-    n,apiSeen[n],DbgGetThreadId(),(void*)ip,caller,(void*)ra,(void*)sp,(void*)R::GetRCX(),(void*)R::GetRDX());
+    n,apiSeen[n].load(),DbgGetThreadId(),(void*)ip,caller,(void*)ra,(void*)sp,(void*)R::GetRCX(),(void*)R::GetRDX());
   }
   if(n<4&&(on(n)||(advanced()&&n==2&&on(1)))){
    switch(n){
@@ -475,11 +476,11 @@ static bool status(int,char**) {
  logf("[KozDbg] Profile: %s | armed: %s | auto-arm: %s\n",enabled?profile().version:"Disabled",armed?"yes":"no",autoArm?"yes":"no");
  const char* labels[]={"PEB/API state","Remote/debug port","Debug object","Thread hide","Kernel debugger","Module list","Invalid handle","TF delivery","Keep callback","Saved DR context","Keep remote breakin","Protect TitanHide","Decoder acceleration"};
  for(unsigned i=0;i<controlCount;i++)logf("  %-20s %s | %u\n",labels[i],(i>=8&&i!=9&&!advanced())||(i==11&&!extendedChecks())?"n/a":(on(i)?"on ":"off"),hits[i].load());
- logf("[KozDbg] Suspended TF guard windows: %u\n",static_cast<unsigned>(tfGuardWindows.size()));
- for(const auto& hardware:hardwareSyscalls)logf("[KozDbg] Decoder hardware site: %p | slot: %u\n",(void*)hardware.address,hardware.slot);
- logf("[KozDbg] Module hardware: %u loads, %u unloads, %u conflicts | pending=%u\n",moduleHardwareLoads,moduleHardwareUnloads,moduleHardwareConflicts,static_cast<unsigned>(moduleHardwareOperation.phase));
+ logf("[KozDbg] Suspended TF guard windows: %u\n",tfGuardStatus.load());
+ for(const auto& hardware:hardwareStatus.snapshot())logf("[KozDbg] Decoder hardware site: %p | slot: %u\n",(void*)hardware.address,hardware.slot);
+ logf("[KozDbg] Module hardware: %u loads, %u unloads, %u conflicts | pending=%u\n",moduleHardwareLoads.load(),moduleHardwareUnloads.load(),moduleHardwareConflicts.load(),moduleHardwarePhaseStatus.load());
  printInfoCounts();
- for(unsigned i=0;i<apiSeen.size();i++)if(apiSeen[i])logf("  API %u visits: %u\n",i,apiSeen[i]);
+ for(unsigned i=0;i<apiSeen.size();i++){const auto visits=apiSeen[i].load();if(visits)logf("  API %u visits: %u\n",i,visits);}
  return true;
 }
 static bool select(int argc,char** argv) {
@@ -589,7 +590,7 @@ static void callback(CBTYPE type,void* info) {
   if(id==5){autoArm=!autoArm;saveSettings();}
   if(id==6){DbgCmdExec("kz_status");GuiFlushLog();}
  } else if(type==CB_SYSTEMBREAKPOINT){if(enabled&&autoArm)DbgCmdExec("kz_apply");}
- else if(type==CB_INITDEBUG){armed=false;owned.clear();pending.clear();for(auto& n:hits)n=0;apiSeen.fill(0);resetInfoCounts();moduleHardwareLoads=0;moduleHardwareUnloads=0;moduleHardwareConflicts=0;}
+ else if(type==CB_INITDEBUG){armed=false;owned.clear();pending.clear();for(auto& n:hits)n=0;for(auto& n:apiSeen)n=0;resetInfoCounts();moduleHardwareLoads=0;moduleHardwareUnloads=0;moduleHardwareConflicts=0;}
  else if(type==CB_EXITPROCESS){
   log("Process exit: recorded intervention totals follow (not proof of reaching original entry).");status(0,nullptr);
   logf("[KozDbg] Pending API returns at exit: %u\n",static_cast<unsigned>(pending.size()));
@@ -673,5 +674,3 @@ extern "C" __declspec(dllexport) bool plugstop(){
  return true;
 }
 BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID){if(reason==DLL_PROCESS_ATTACH){instance=module;DisableThreadLibraryCalls(module);}return TRUE;}
-
-

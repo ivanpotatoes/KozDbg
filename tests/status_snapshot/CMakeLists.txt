@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(KozDbgStatusSnapshotTests LANGUAGES CXX)
+add_executable(status_snapshot_tests test.cpp)
+target_compile_features(status_snapshot_tests PRIVATE cxx_std_17)
+target_compile_options(status_snapshot_tests PRIVATE /W4 /WX)
+enable_testing()
+add_test(NAME concurrent_status_snapshot COMMAND status_snapshot_tests)

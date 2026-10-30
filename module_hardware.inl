@@ -20,7 +20,8 @@ static std::vector<ModuleHardwareAlias> moduleHardwareAliases;
 static ModuleHardwareOperation moduleHardwareOperation;
 static std::atomic<bool> moduleHardwareBusy{false};
 static std::atomic<bool> moduleHardwarePauseActive{false},moduleHardwareStopping{false};
-static unsigned moduleHardwareLoads=0,moduleHardwareUnloads=0,moduleHardwareConflicts=0;
+static std::atomic<unsigned> moduleHardwareLoads{0},moduleHardwareUnloads{0},moduleHardwareConflicts{0};
+static std::atomic<unsigned> moduleHardwarePhaseStatus{0};
 
 static bool moduleHardwareNameSafe(const std::string& name) {
  return !name.empty()&&name.size()<MAX_MODULE_SIZE&&std::none_of(name.begin(),name.end(),[](unsigned char c){return c<32||c=='"'||c=='\\'||c=='/';});
@@ -94,7 +95,7 @@ static bool moduleHardwareRestore(ModuleHardwareOperation& operation) {
   if(!DbgFunctions()->GetBridgeBp(bp_hardware,saved.before.addr,&current)||!current.enabled||current.slot>=4||
      (slots&(1u<<current.slot))||!moduleHardwareMatches(saved,current)){ok=false;continue;}
   slots|=1u<<current.slot;saved.suspended=false;
-  for(auto& hardware:hardwareSyscalls)if(hardware.address==saved.before.addr)hardware.slot=current.slot;
+  for(auto& hardware:hardwareSyscalls)if(hardware.address==saved.before.addr){hardware.slot=current.slot;hardwareStatus.set(hardware.address,current.slot);}
   infof("Module hardware breakpoint restored","[KozDbg] Restored module hardware breakpoint %p in DR%u; analyst metadata and hit count retained.\n",(void*)current.addr,current.slot);
  }
  return ok;
@@ -117,7 +118,7 @@ static void moduleHardwareComplete(const char* checkpoint) {
  if(moduleHardwareOperation.phase==ModuleHardwarePhase::Load)++moduleHardwareLoads;
  else if(moduleHardwareOperation.phase==ModuleHardwarePhase::Unload)++moduleHardwareUnloads;
  infof("Duplicate module hardware repair completed","[KozDbg] Duplicate module hardware repair completed at %s; DLL breakpoint settings untouched.\n",checkpoint);
- moduleHardwareOperation={};
+ moduleHardwareOperation={};moduleHardwarePhaseStatus=0;
 }
 static bool moduleHardwareSuppressDelete(DWORD index) {
  // Public TitanEngine register IDs UE_DR0..UE_DR3 are 11..14.
@@ -155,7 +156,7 @@ static bool clearModuleHardware() {
   ok=moduleHardwareRestore(moduleHardwareOperation);
   if(!ok)log("Module hardware cleanup incomplete; records retained. Stop the session before unloading.");
  }
- if(ok){moduleHardwareOperation={};moduleHardwareAliases.clear();}
+ if(ok){moduleHardwareOperation={};moduleHardwarePhaseStatus=0;moduleHardwareAliases.clear();}
  moduleHardwareBusy=false;return ok;
 }
 static void moduleHardwarePauseRecovery() {
@@ -215,7 +216,7 @@ static void moduleHardwareEvent(CBTYPE type,void* info) {
  if(moduleHardwareOperation.phase!=ModuleHardwarePhase::None&&DbgIsDebugging()&&
     moduleHardwareOperation.process!=GetProcessId(DbgGetProcessHandle())){
   log("Discarding module hardware state from an ended session.");
-  moduleHardwareOperation={};moduleHardwareAliases.clear();
+  moduleHardwareOperation={};moduleHardwarePhaseStatus=0;moduleHardwareAliases.clear();
  }
  bool pauseForFailure=false;
  if(type==CB_DEBUGEVENT&&armed){
@@ -238,10 +239,10 @@ static void moduleHardwareEvent(CBTYPE type,void* info) {
       if(!moduleHardwareSnapshot(operation)){++moduleHardwareConflicts;log("Cannot snapshot duplicate-module hardware entries.");pauseForFailure=true;}
       else if(!operation.records.empty()){
        if(moduleHardwareSuspend(operation)){
-        moduleHardwareOperation=std::move(operation);
+        {moduleHardwareOperation=std::move(operation);moduleHardwarePhaseStatus=static_cast<unsigned>(moduleHardwareOperation.phase);}
         infof("Hardware entries sheltered for duplicate load","[KozDbg] Sheltered %u hardware entries before duplicate %s load %p; original %p.\n",static_cast<unsigned>(moduleHardwareOperation.records.size()),name.c_str(),(void*)copy,(void*)original);
        }else{
-        if(!moduleHardwareRestore(operation))moduleHardwareOperation=std::move(operation);
+        if(!moduleHardwareRestore(operation)){moduleHardwareOperation=std::move(operation);moduleHardwarePhaseStatus=static_cast<unsigned>(moduleHardwareOperation.phase);}
         ++moduleHardwareConflicts;pauseForFailure=true;log("Duplicate load suspension failed; incomplete rollback retained.");
        }
       }
@@ -266,7 +267,7 @@ static void moduleHardwareEvent(CBTYPE type,void* info) {
    else if(moduleHardwareResident(operation.alias)){
     if(!moduleHardwareSnapshot(operation)){++moduleHardwareConflicts;pauseForFailure=true;}
     else if(!operation.records.empty()){
-     moduleHardwareOperation=std::move(operation);
+     {moduleHardwareOperation=std::move(operation);moduleHardwarePhaseStatus=static_cast<unsigned>(moduleHardwareOperation.phase);}
      infof("Hardware entries protected for duplicate unload","[KozDbg] Protecting %u live hardware entries during duplicate %s unload; DLL breakpoint conditions retain live DR values.\n",static_cast<unsigned>(moduleHardwareOperation.records.size()),moduleHardwareOperation.alias.name.c_str());
     }
    }
