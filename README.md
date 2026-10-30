@@ -2,7 +2,11 @@
 
 An anti-anti-debug plugin for **x64dbg**, built from my research into VMProtect's anti-debug checks. It supports the tested versions from **3.3.1 to 3.10.1**, with a separate profile for each version.
 
-**Native x64 · No kernel driver · Editable INI profiles · MIT license**
+> **No kernel driver required — including the VMProtect 3.10.1 profile.**
+>
+> KozDbg runs entirely in user mode inside x64dbg. It handles supported kernel-debugger detection queries from user mode too, without installing or loading a driver.
+
+**Native x64 · Editable INI profiles · MIT license**
 
 [Download](https://github.com/ivanpotatoes/KozDbg/releases/latest) · [Demo](https://www.youtube.com/watch?v=r7Q8KtjtaA0) · [Profile format](PROFILES.md) · [Report a bug](https://github.com/ivanpotatoes/KozDbg/issues)
 
