@@ -17,6 +17,7 @@
 #include <map>
 #include <mutex>
 #include "retry_cleanup.h"
+#include "profile_transition.h"
 
 namespace R = Script::Register;
 namespace M = Script::Module;
@@ -294,8 +295,7 @@ static bool removeBP(duint addr) {
  return true;
 }
 static bool disarm() {
- armed=false;
- if(!clearModuleHardware()){log("Disarm incomplete: module hardware recovery is still pending. Resolve it or stop the session before applying another profile.");return false;}
+ if(!kozBeginDisarm(armed,clearModuleHardware)){log("Disarm deferred: module hardware recovery is still pending. Current profile and armed state retained; resume or stop before reapplying.");return false;}
  if(!disarmDirect()){log("Disarm incomplete: target state or direct breakpoints could not be restored; retry records retained.");return false;}
  if(DbgIsDebugging()&&!kozRetryCleanup(owned,deleteOwned)){
   log("Disarm incomplete: owned API breakpoints remain; retry records retained.");return false;
@@ -303,9 +303,7 @@ static bool disarm() {
  owned.clear();pending.clear();hiddenThreads.clear();
  return true;
 }
-static bool apply(int,char**) {
- if(DbgIsDebugging()&&DbgIsRunning()){log("Pause the target before applying a profile.");return false;}
- if(!disarm())return false;
+static bool armCurrentProfile() {
  if(!enabled){if(DbgIsDebugging())cleanSavedBreakpoints();log("Disabled. Owned breakpoints removed.");return true;}
  if(!DbgIsDebugging()){logf("[KozDbg] %s selected; waiting for a new debug session.\n",profile().version);return true;}
  if(!installDebugEventTail()){log("Cannot install the debugger event-tail checkpoint; profile was not armed.");return false;}
@@ -336,6 +334,28 @@ static bool apply(int,char**) {
  armed=true;
  logf("[KozDbg] Verified %u API breakpoints by address, name and command.\n",static_cast<unsigned>(owned.size()));
  logf("[KozDbg] %s profile armed. Addresses resolved in this process; no sample-specific offsets. F9 to continue.\n",profile().version);return true;
+}
+static bool apply(int,char**) {
+ if(DbgIsDebugging()&&DbgIsRunning()){log("Pause the target before applying a profile.");return false;}
+ return disarm()&&armCurrentProfile();
+}
+static bool configureProfile(unsigned index,unsigned options,bool enable,bool automatic) {
+ if(index>=profiles.size()||(DbgIsDebugging()&&DbgIsRunning())){
+  log("Pause the target before applying changes.");return false;
+ }
+ return kozChangeConfiguration(disarm,[&]{
+  selectedProfile=index;mask=options&8191;enabled=enable;autoArm=automatic;
+ },armCurrentProfile,saveSettings);
+}
+static bool configureCommand(int argc,char** argv) {
+ if(argc!=5)return false;
+ unsigned values[4]{};
+ for(unsigned i=0;i<4;i++){
+  const char* p=argv[i+1];if(!*p)return false;
+  for(;*p;++p){if(*p<'0'||*p>'9'||values[i]>8191)return false;values[i]=values[i]*10+static_cast<unsigned>(*p-'0');}
+ }
+ if(values[0]>=profiles.size()||values[1]>8191||values[2]>1||values[3]>1)return false;
+ return configureProfile(values[0],values[1],values[2]!=0,values[3]!=0);
 }
 static bool filterModules(const Pending& p) {
  if((int32_t)R::GetEAX()<0)return true;
@@ -465,9 +485,9 @@ static bool status(int,char**) {
 static bool select(int argc,char** argv) {
  if(DbgIsDebugging()&&DbgIsRunning()){log("Pause before changing the selected profile.");return false;}
  if(argc!=2){log("Usage: kz_profile <INI section name> | off");return false;}
- if(strcmp(argv[1],"off")==0){enabled=false;saveSettings();return apply(0,nullptr);}
+ if(strcmp(argv[1],"off")==0)return configureProfile(selectedProfile,mask,false,autoArm);
  for(unsigned i=0;i<profiles.size();i++)if(strcmp(argv[1],profiles[i].key)==0||strcmp(argv[1],profiles[i].version)==0){
-  selectedProfile=i;mask=readProfileOptions(i);enabled=true;saveSettings();return apply(0,nullptr);
+  return configureProfile(i,readProfileOptions(i),true,autoArm);
  }
  log("Usage: kz_profile <INI section name> | off");return false;
 }
@@ -543,11 +563,14 @@ static INT_PTR CALLBACK dialogProc(HWND wnd,UINT msg,WPARAM wp,LPARAM) {
    if(DbgIsDebugging()&&DbgIsRunning()){MessageBoxW(wnd,L"Pause the target before applying changes.",L"KozDbg",MB_OK|MB_ICONINFORMATION);return TRUE;}
    const auto choice=SendDlgItemMessageW(wnd,110,CB_GETCURSEL,0,0);
    if(choice<0||choice>static_cast<LRESULT>(profiles.size()))return TRUE;
-   enabled=choice<static_cast<LRESULT>(profiles.size());
-   if(enabled)selectedProfile=static_cast<unsigned>(choice);
-   autoArm=IsDlgButtonChecked(wnd,111)==BST_CHECKED;unsigned m=0;
+   const bool requestedEnabled=choice<static_cast<LRESULT>(profiles.size());
+   const unsigned requestedProfile=requestedEnabled?static_cast<unsigned>(choice):selectedProfile.load();
+   const bool requestedAuto=IsDlgButtonChecked(wnd,111)==BST_CHECKED;unsigned m=0;
    for(unsigned i=0;i<controlCount;i++)if(IsDlgButtonChecked(wnd,120+i)==BST_CHECKED)m|=1u<<i;
-   mask=m;saveSettings();DbgCmdExec("kz_apply");EndDialog(wnd,1);return TRUE;
+   const std::string request="kz_config "+std::to_string(requestedProfile)+","+std::to_string(m)+","+
+    (requestedEnabled?"1":"0")+","+(requestedAuto?"1":"0");
+   if(!DbgCmdExec(request.c_str())){MessageBoxW(wnd,L"Could not queue settings. No changes were applied.",L"KozDbg",MB_OK|MB_ICONERROR);return TRUE;}
+   EndDialog(wnd,1);return TRUE;
   }
  }
  if(msg==WM_DESTROY){if(settingsTooltips)DestroyWindow(settingsTooltips);settingsTooltips=nullptr;settingsWindow=nullptr;}
@@ -615,6 +638,7 @@ extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
  for(unsigned i=0;i<profiles.size();i++)if(widen(profiles[i].key)==savedProfile)selectedProfile=i;
  mask=readProfileOptions(selectedProfile);
  _plugin_registercommand(pluginHandle,"kz_apply",apply,false);
+ _plugin_registercommand(pluginHandle,"kz_config",configureCommand,false);
  _plugin_registercommand(pluginHandle,"kz_hit",hit,true);
  _plugin_registercommand(pluginHandle,"kz_syscall",syscallHit,true);
  _plugin_registercommand(pluginHandle,"kz_profile",select,false);
@@ -645,7 +669,7 @@ extern "C" __declspec(dllexport) bool plugstop(){
  if(DbgIsDebugging()&&DbgIsRunning()){log("Pause or stop the target before unloading KozDbg.");return false;}
  if(!disarm()){log("Cannot free KozDbg: hardware recovery is pending. x64dbg may still detach plugin commands/callbacks; stop the session and restart x64dbg.");return false;}
  if(!removeDebugEventTail())return false;
- for(auto n:{"kz_apply","kz_hit","kz_syscall","kz_profile","kz_settings","kz_status"})_plugin_unregistercommand(pluginHandle,n);
+ for(auto n:{"kz_apply","kz_config","kz_hit","kz_syscall","kz_profile","kz_settings","kz_status"})_plugin_unregistercommand(pluginHandle,n);
  return true;
 }
 BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID){if(reason==DLL_PROCESS_ATTACH){instance=module;DisableThreadLibraryCalls(module);}return TRUE;}
