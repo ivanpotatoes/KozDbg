@@ -16,6 +16,7 @@
 #include <limits>
 #include <map>
 #include <mutex>
+#include "retry_cleanup.h"
 
 namespace R = Script::Register;
 namespace M = Script::Module;
@@ -55,7 +56,7 @@ struct Pending {duint address, buffer, size, stack; DWORD thread; ReturnKind kin
 static std::vector<Pending> pending;
 static bool setupDirect();
 static bool setupLegacyContext();
-static void disarmDirect();
+static bool disarmDirect();
 static bool hitDirect(int action,duint ip,duint sp,duint ra);
 static bool syscallHit(int,char**);
 static bool restoreAttach();
@@ -130,7 +131,12 @@ static BPXTYPE ownedType(duint address) {
   strncmp(bp.name,"KZ_",3)==0&&strncmp(bp.commandText,"kz_hit ",7)==0)return type;
  return bp_none;
 }
-static void deleteOwned(duint address){auto type=ownedType(address);if(type!=bp_none)cmd(std::string(type==bp_memory?"bpmc ":"bc ")+hex(address));}
+static bool deleteOwned(duint address){
+ auto type=ownedType(address);
+ if(type==bp_none)return true;
+ const bool removed=cmd(std::string(type==bp_memory?"bpmc ":"bc ")+hex(address));
+ return removed&&ownedType(address)==bp_none;
+}
 static void cleanSavedBreakpoints() {
  // Only our marked breakpoints; never erase an analyst's ordinary breakpoints.
  for(auto type:{bp_normal,bp_memory,bp_hardware,bp_dll}){
@@ -282,15 +288,18 @@ static bool resolveBinding(std::vector<ApiBinding>& bindings,const char* symbol,
  }
  log("API thunk chain is too deep; profile was not armed.");return false;
 }
-static void removeBP(duint addr) {
+static bool removeBP(duint addr) {
  auto it=std::find(owned.begin(),owned.end(),addr);
- if(it!=owned.end()){deleteOwned(addr);owned.erase(it);}
+ if(it!=owned.end()){if(!deleteOwned(addr))return false;owned.erase(it);}
+ return true;
 }
 static bool disarm() {
  armed=false;
  if(!clearModuleHardware()){log("Disarm incomplete: module hardware recovery is still pending. Resolve it or stop the session before applying another profile.");return false;}
- disarmDirect();
- if(DbgIsDebugging())for(auto addr:owned)deleteOwned(addr);
+ if(!disarmDirect()){log("Disarm incomplete: target state or direct breakpoints could not be restored; retry records retained.");return false;}
+ if(DbgIsDebugging()&&!kozRetryCleanup(owned,deleteOwned)){
+  log("Disarm incomplete: owned API breakpoints remain; retry records retained.");return false;
+ }
  owned.clear();pending.clear();hiddenThreads.clear();
  return true;
 }
@@ -388,7 +397,7 @@ static bool hit(int argc,char** argv) {
   auto it=std::find_if(pending.begin(),pending.end(),[&](const Pending& p){return p.address==ip&&p.thread==DbgGetThreadId()&&p.stack==sp;});
   if(it!=pending.end()){
    auto p=*it;pending.erase(it);ok=processReturn(p);
-   if(std::none_of(pending.begin(),pending.end(),[&](const Pending& other){return other.address==ip;}))removeBP(ip);
+   if(std::none_of(pending.begin(),pending.end(),[&](const Pending& other){return other.address==ip;}))ok=removeBP(ip)&&ok;
   }
  } else if(read(sp,ra)) {
   int n=atoi(argv[1]);

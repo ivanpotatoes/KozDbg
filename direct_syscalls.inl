@@ -321,19 +321,44 @@ static bool setupDirect() {
  for(const auto& b:bindings)if(!addBP(b.address,std::to_string(b.action))){log("Cannot install direct-check API breakpoint; inspect preceding conflict/setup log.");return false;}
  return scanSyscalls();
 }
-static void disarmDirect() {
- if(DbgIsDebugging()){
-  for(auto p:guardedSites)if(ownedGuard(p))cmd("bpmc "+hex(p));
-  if(advancedPid==GetProcessId(DbgGetProcessHandle()))for(const auto& saved:savedContexts){
-   CONTEXT current{};
-   if(read(saved.address,current)&&current.Rip==saved.exceptionIP&&!(current.Dr0|current.Dr1|current.Dr2|current.Dr3))
-    DbgMemWrite(saved.address+offsetof(CONTEXT,Dr0),saved.dr.data(),sizeof(saved.dr));
+static bool disarmDirect() {
+ bool complete=true;
+ // There is nothing left to restore in an exited target. DbgIsDebugging can
+ // remain true while the debugger is processing its final stop callbacks.
+ const HANDLE process=DbgGetProcessHandle();
+ if(DbgIsDebugging()&&(!process||WaitForSingleObject(process,0)!=WAIT_OBJECT_0)){
+  complete=kozRetryCleanup(guardedSites,[](duint p){
+   if(!ownedGuard(p))return true;
+   return cmd("bpmc "+hex(p))&&!ownedGuard(p);
+  })&&complete;
+  if(advancedPid==GetProcessId(DbgGetProcessHandle())){
+   complete=kozRetryCleanup(savedContexts,[](const SavedDebugContext& saved){
+    CONTEXT current{};
+    if(!read(saved.address,current))return false;
+    // A reused/modified context belongs to the target; do not overwrite it.
+    if(current.Rip!=saved.exceptionIP||(current.Dr0|current.Dr1|current.Dr2|current.Dr3))return true;
+    std::array<duint,4> restored{};
+    const duint address=saved.address+offsetof(CONTEXT,Dr0);
+    return DbgMemWrite(address,saved.dr.data(),sizeof(saved.dr))&&
+     DbgMemRead(address,restored.data(),sizeof(restored))&&restored==saved.dr;
+   })&&complete;
+   if(pebByte){
+    unsigned char current=0;
+    bool restored=read(pebByte,current);
+    if(restored&&current==0)restored=write(pebByte,savedPebByte)&&read(pebByte,current)&&current==savedPebByte;
+    if(restored)pebByte=0;
+    else complete=false;
+   }
   }
-  if(advancedPid==GetProcessId(DbgGetProcessHandle())&&pebByte){unsigned char current=0;if(read(pebByte,current)&&current==0)write(pebByte,savedPebByte);}
-  for(const auto& hardware:hardwareSyscalls)if(ownedHardware(hardware.address))cmd("bphc "+hex(hardware.address));
+  complete=kozRetryCleanup(hardwareSyscalls,[](const HardwareSyscall& hardware){
+   if(!ownedHardware(hardware.address))return true;
+   return cmd("bphc "+hex(hardware.address))&&!ownedHardware(hardware.address);
+  })&&complete;
  }
+ if(!complete)return false;
  hardwareSyscalls.clear();
  guardedSites.clear();syscallSites.clear();savedContexts.clear();tfGuardWindows.clear();pebByte=0;remoteBreakin=0;advancedPid=0;
+ return true;
 }
 static bool emulateQuery(duint process,duint infoClass,duint buffer,duint size,duint returnLength,duint& result) {
  bool port=infoClass==7&&on(1),object=infoClass==0x1e&&on(2);
