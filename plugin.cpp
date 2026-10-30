@@ -19,6 +19,7 @@
 #include "retry_cleanup.h"
 #include "profile_transition.h"
 #include "status_snapshot.h"
+#include "ini_writer.h"
 
 namespace R = Script::Register;
 namespace M = Script::Module;
@@ -116,16 +117,26 @@ static void updateMenu() {
  _plugin_menuentrysetchecked(pluginHandle,5,autoArm);
 }
 #include "profiles.inl"
-static void saveSettings() {
- WritePrivateProfileStringW(L"Settings",L"Enabled",enabled?L"1":L"0",iniPath.c_str());
- WritePrivateProfileStringW(L"Settings",L"AutoArm",autoArm?L"1":L"0",iniPath.c_str());
+static void settingsSaveError(){
+ MessageBoxW(owner,L"Could not save all settings. Runtime settings may already be applied, but disk settings may be incomplete. See the log for the file, section, key and Windows error. Fix file permissions and save again.",L"KozDbg - settings not saved",MB_OK|MB_ICONERROR);
+}
+static bool saveSettings() {
+ KozIniWriter writer;
+ writer.put(iniPath,L"Settings",L"Enabled",enabled?L"1":L"0");
+ writer.put(iniPath,L"Settings",L"AutoArm",autoArm?L"1":L"0");
  auto value=std::to_wstring(mask.load());
- WritePrivateProfileStringW(L"Settings",L"Controls",value.c_str(),iniPath.c_str());
- WritePrivateProfileStringW(L"Settings",L"ControlsSchema",L"4",iniPath.c_str());
+ writer.put(iniPath,L"Settings",L"Controls",value.c_str());
+ writer.put(iniPath,L"Settings",L"ControlsSchema",L"4");
  std::wstring key;for(const char* p=profile().key;*p;++p)key+=static_cast<wchar_t>(*p);
- WritePrivateProfileStringW(L"Settings",L"Profile",key.c_str(),iniPath.c_str());
- saveProfileOptions();
+ writer.put(iniPath,L"Settings",L"Profile",key.c_str());
+ saveProfileOptions(writer);
  updateMenu();
+ if(!writer.ok()){
+  logf("[KozDbg] Settings save failed: file=%ls section=%ls key=%ls Windows error=%lu. Runtime settings remain applied; disk settings may be incomplete.\n",writer.path.c_str(),writer.section.c_str(),writer.key.c_str(),writer.error);
+  GuiExecuteOnGuiThread(settingsSaveError);
+  return false;
+ }
+ return true;
 }
 static BPXTYPE ownedType(duint address) {
  BRIDGEBP bp{};

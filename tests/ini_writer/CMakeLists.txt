@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(KozIniTests LANGUAGES CXX)
+add_executable(ini_writer_tests test.cpp)
+target_compile_features(ini_writer_tests PRIVATE cxx_std_17)
+target_compile_options(ini_writer_tests PRIVATE /W4 /WX)

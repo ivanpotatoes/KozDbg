@@ -10,7 +10,7 @@ int main() {
  auto prepare=[&]{return kozBeginDisarm(armed,[&]{return ready;});};
  auto select=[&]{profile=380;options=7;};
  auto activate=[&]{++installCalls;armed=true;return true;};
- auto save=[&]{saved=profile;};
+ auto save=[&]{saved=profile;return true;};
  assert(!kozChangeConfiguration(prepare,select,activate,save));
  assert(armed&&profile==331&&options==8191&&saved==331&&installCalls==0);
  // A repeated rejection also leaves an already inactive session inactive.
@@ -30,5 +30,7 @@ int main() {
  ready=true;
  assert(kozChangeConfiguration(prepare,[&]{enabled=false;},[]{return true;},save));
  assert(!enabled&&!armed);
+ assert(!kozChangeConfiguration(prepare,select,activate,[]{return false;}));
+ assert(armed&&profile==380);
  puts("PASS: rejected switch/disable, retained state, retry, install failure, successful disable");
 }

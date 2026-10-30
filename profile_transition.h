@@ -14,7 +14,6 @@ bool kozChangeConfiguration(Prepare prepare,Select select,Activate activate,Save
  if(!prepare())return false;
  select();
  if(!activate())return false;
- save();
- return true;
+ return save();
 }
 

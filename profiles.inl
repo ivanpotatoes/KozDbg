@@ -12,20 +12,25 @@ static unsigned readProfileOptions(unsigned index){
  for(unsigned i=0;i<controlCount;i++)if(GetPrivateProfileIntW(section.c_str(),optionKeys[i],1,profilesPath.c_str()))value|=1u<<i;
  return value;
 }
-static void saveProfileOptions(){
+static void saveProfileOptions(KozIniWriter& writer){
  const auto section=widen(profile().key);
- for(unsigned i=0;i<controlCount;i++)WritePrivateProfileStringW(section.c_str(),optionKeys[i],on(i)?L"1":L"0",profilesPath.c_str());
+ for(unsigned i=0;i<controlCount;i++)writer.put(profilesPath,section.c_str(),optionKeys[i],on(i)?L"1":L"0");
 }
 static void loadProfiles(){
  // First startup migrates the old checkbox mask into each preset, without overwriting existing files.
  if(GetFileAttributesW(profilesPath.c_str())==INVALID_FILE_ATTRIBUTES){
+  KozIniWriter writer;
   for(const auto& p:profiles){
    const auto section=widen(p.key);
-   WritePrivateProfileStringW(section.c_str(),L"Name",p.label,profilesPath.c_str());
+   writer.put(profilesPath,section.c_str(),L"Name",p.label);
    const wchar_t* engine=p.engine==Engine::Api?L"Api":p.engine==Engine::ClusteredSyscalls?L"ClusteredSyscalls":L"ScatteredSyscalls";
-   WritePrivateProfileStringW(section.c_str(),L"Engine",engine,profilesPath.c_str());
-   WritePrivateProfileStringW(section.c_str(),L"Extended",p.extended?L"1":L"0",profilesPath.c_str());
-   for(unsigned i=0;i<controlCount;i++)WritePrivateProfileStringW(section.c_str(),optionKeys[i],on(i)?L"1":L"0",profilesPath.c_str());
+   writer.put(profilesPath,section.c_str(),L"Engine",engine);
+   writer.put(profilesPath,section.c_str(),L"Extended",p.extended?L"1":L"0");
+   for(unsigned i=0;i<controlCount;i++)writer.put(profilesPath,section.c_str(),optionKeys[i],on(i)?L"1":L"0");
+  }
+  if(!writer.ok()){
+   logf("[KozDbg] Default profiles save failed: file=%ls section=%ls key=%ls Windows error=%lu. Using built-in defaults; check the file before restarting.\n",writer.path.c_str(),writer.section.c_str(),writer.key.c_str(),writer.error);
+   return;
   }
  }
  std::vector<wchar_t> sections(32768);
