@@ -78,9 +78,19 @@ For bug reports, include the debugger build, VMProtect version, protection optio
 
 ## Demo
 
-This video shows the **x64 build**. Three small programs, **BasicProbe**, **RiddleGame** and **KeyCheck**, are protected with different VMProtect versions and then run in x64dbg with KozDbg. Click the thumbnail to watch.
+Click a thumbnail to watch on YouTube.
 
-[![Watch the KozDbg demo](https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg)](https://www.youtube.com/watch?v=r7Q8KtjtaA0)
+### x32 demo
+
+KozDbg running in x32dbg with 32-bit programs.
+
+[![Watch the KozDbg x32 demo](https://img.youtube.com/vi/VaEJDaibNfY/hqdefault.jpg)](https://www.youtube.com/watch?v=VaEJDaibNfY)
+
+### x64 demo
+
+BasicProbe, RiddleGame and KeyCheck protected with different VMProtect versions, then run in x64dbg with KozDbg.
+
+[![Watch the KozDbg x64 demo](https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg)](https://www.youtube.com/watch?v=r7Q8KtjtaA0)
 
 ## Research behind KozDbg
 
