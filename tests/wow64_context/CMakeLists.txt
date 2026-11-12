@@ -1,5 +1,0 @@
-cmake_minimum_required(VERSION 3.20)
-project(KozContextTest LANGUAGES CXX)
-add_executable(context_test test.cpp)
-target_compile_features(context_test PRIVATE cxx_std_17)
-target_compile_options(context_test PRIVATE /W4 /WX)
