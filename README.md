@@ -21,7 +21,7 @@ Use **x64dbg** for 64-bit programs and **x32dbg** for 32-bit programs. Match the
 | x64dbg | `KozDbg.dp64` | `KozDbg.dp64.ini` and `KozDbg.dp64.ini.profiles.ini` |
 | x32dbg | `KozDbg.dp32` | `KozDbg.dp32.ini` |
 
-The current **v1.0.1 release contains the x64 build only**. The x32 source is included in this branch; use the build commands below to produce `KozDbg.dp32`.
+**v1.1.0 includes both builds.** Download [KozDbg-v1.1.0-x64.zip](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.0/KozDbg-v1.1.0-x64.zip) or [KozDbg-v1.1.0-x32.zip](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.0/KozDbg-v1.1.0-x32.zip). Each ZIP includes the matching plugin and default INI files. When updating, keep your existing INI files.
 
 1. Close the debugger and place the matching plugin in its `plugins` folder, beside `x64dbg.exe` or `x32dbg.exe`.
 2. Open the debugger. Under **Plugins > KozDbg x64** or **KozDbg x32**, select the VMProtect version.
