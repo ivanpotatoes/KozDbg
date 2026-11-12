@@ -10,6 +10,8 @@ CMakeUserPresets.json
 *.lib
 *.exp
 *.dp64
+*.dp32
 *.user
 KozDbg.dp64.ini*
+KozDbg.dp32.ini*
 *.backup-*
