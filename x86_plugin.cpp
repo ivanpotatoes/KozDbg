@@ -468,7 +468,7 @@ static INT_PTR CALLBACK dialog(HWND wnd,UINT msg,WPARAM wp,LPARAM){
    if(index>=0&&index<static_cast<LRESULT>(sizeof(profiles)/sizeof(profiles[0]))){const auto value=profileOptions(profiles[index].id);for(unsigned i=0;i<13;i++){EnableWindow(GetDlgItem(wnd,120+i),(profileMask(profiles[index].id)&(1u<<i))!=0);CheckDlgButton(wnd,120+i,(value&(1u<<i))?BST_CHECKED:BST_UNCHECKED);}}return TRUE;
   }
   if(LOWORD(wp)==IDCANCEL){EndDialog(wnd,0);return TRUE;}
-  if(LOWORD(wp)==150){MessageBoxW(wnd,L"KozDbg x32\nIvan Kozlovsky\ncontact@ivankozlovsky.com\nivankozlovsky.com\nMIT license\n\nAPI backend tested with x32 RiddleGame on 3.3.1, 3.4.0 and 3.5.0.\n3.6 tested with x32 RiddleGame. 3.8 automatic GUI verified. 3.9.4 and 3.10.1 automatic GUI verified on the supplied RiddleGame samples.",L"About KozDbg",MB_OK);return TRUE;}
+  if(LOWORD(wp)==150){MessageBoxW(wnd,L"KozDbg x32\n\nCreator: Ivan Kozlovsky\ncontact@ivankozlovsky.com\nivankozlovsky.com\n\nOpen source - MIT License",L"About KozDbg",MB_OK);return TRUE;}
   if(LOWORD(wp)==151){ShellExecuteW(wnd,L"open",L"notepad.exe",(L"\""+iniPath+L"\"").c_str(),nullptr,SW_SHOWNORMAL);return TRUE;}
   if(LOWORD(wp)==IDOK){
    if(DbgIsDebugging()&&DbgIsRunning()){MessageBoxW(wnd,L"Pause the target first.",L"KozDbg",MB_OK);return TRUE;}
