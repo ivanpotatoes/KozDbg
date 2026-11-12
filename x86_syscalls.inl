@@ -133,14 +133,13 @@ static bool nativeOwnHardware(duint at){
   (nativeBindingName(bp.name,"KZ_R32_")&&nativeBindingSettings(bp,17));
 }
 static bool nativeOccupiedSlots(unsigned& occupied){
- occupied=0;duint count=0;const auto functions=DbgFunctions();
- auto refs=functions->BpRefList(&count);if(count&&!refs)return false;
- bool ok=true;
- for(duint i=0;i<count;i++)if(refs[i].type==bp_hardware){
-  duint slot=0;if(!functions->BpGetFieldNumber(&refs[i],bpf_hwslot,&slot)){ok=false;break;}
-  if(slot<4)occupied|=1u<<slot;
- }
- if(refs)BridgeFree(refs);return ok;
+ occupied=0;BPMAP map{};
+ // Some debugger builds leak their module-name TLS cache in BpRefList.
+ // This hot path only needs hardware slots, not hashed module references.
+ const int count=DbgGetBpList(bp_hardware,&map);
+ const bool ok=count>=0&&map.count==count&&(!count||map.bp);
+ if(ok)for(int i=0;i<count;i++)if(map.bp[i].slot<4)occupied|=1u<<map.bp[i].slot;
+ if(map.bp)BridgeFree(map.bp);return ok;
 }
 static bool nativeOwnGuard(duint at){
  BRIDGEBP bp{};return DbgFunctions()->GetBridgeBp(bp_memory,nativePage(at),&bp)&&
