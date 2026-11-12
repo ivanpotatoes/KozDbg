@@ -33,13 +33,13 @@ static std::atomic<bool> enabled{true}, autoArm{true}, armed{false};
 enum class Engine { Api, ClusteredSyscalls, ScatteredSyscalls };
 struct Profile {const char* key;const char* version;const char* menu;const wchar_t* label;int menuId;Engine engine;bool extended=false;};
 static std::vector<Profile> profiles{
- {"331","3.3.1","VMProtect 3.3.1",L"VMProtect 3.3.1 - x64",1,Engine::Api},
- {"340","3.4.0","VMProtect 3.4.0",L"VMProtect 3.4.0 - x64",7,Engine::Api},
- {"350","3.5.0","VMProtect 3.5.0",L"VMProtect 3.5.0 - x64",8,Engine::Api},
- {"360","3.6","VMProtect 3.6",L"VMProtect 3.6 - x64",9,Engine::ClusteredSyscalls},
- {"380","3.8.0","VMProtect 3.8.0",L"VMProtect 3.8.0 - x64",10,Engine::ScatteredSyscalls},
- {"394","3.9.4","VMProtect 3.9.4",L"VMProtect 3.9.4 - x64",11,Engine::ScatteredSyscalls,true},
- {"3101","3.10.1","VMProtect 3.10.1",L"VMProtect 3.10.1 - x64",12,Engine::ScatteredSyscalls,true}
+ {"331","3.3.1","VMProtect 3.3.1 - x64",L"VMProtect 3.3.1 - x64",1,Engine::Api},
+ {"340","3.4.0","VMProtect 3.4.0 - x64",L"VMProtect 3.4.0 - x64",7,Engine::Api},
+ {"350","3.5.0","VMProtect 3.5.0 - x64",L"VMProtect 3.5.0 - x64",8,Engine::Api},
+ {"360","3.6","VMProtect 3.6 - x64",L"VMProtect 3.6 - x64",9,Engine::ClusteredSyscalls},
+ {"380","3.8.0","VMProtect 3.8.0 - x64",L"VMProtect 3.8.0 - x64",10,Engine::ScatteredSyscalls},
+ {"394","3.9.4","VMProtect 3.9.4 - x64",L"VMProtect 3.9.4 - x64",11,Engine::ScatteredSyscalls,true},
+ {"3101","3.10.1","VMProtect 3.10.1 - x64",L"VMProtect 3.10.1 - x64",12,Engine::ScatteredSyscalls,true}
 };
 static std::atomic<unsigned> selectedProfile{0};
 static const Profile& profile(){return profiles[selectedProfile.load()];}
@@ -548,7 +548,7 @@ static void createSettingsTooltips(HWND wnd){
 }
 static INT_PTR CALLBACK dialogProc(HWND wnd,UINT msg,WPARAM wp,LPARAM) {
  if(msg==WM_INITDIALOG){
-  settingsWindow=wnd;
+  settingsWindow=wnd;SetWindowTextW(wnd,L"KozDbg x64");
   SendMessageW(wnd,WM_SETICON,ICON_SMALL,(LPARAM)LoadIconW(instance,MAKEINTRESOURCEW(102)));
   SendMessageW(wnd,WM_SETICON,ICON_BIG,(LPARAM)LoadIconW(instance,MAKEINTRESOURCEW(102)));
   for(const auto& p:profiles)SendDlgItemMessageW(wnd,110,CB_ADDSTRING,0,(LPARAM)p.label);
@@ -568,7 +568,7 @@ static INT_PTR CALLBACK dialogProc(HWND wnd,UINT msg,WPARAM wp,LPARAM) {
    }
    enableAdvancedControls(wnd);return TRUE;
   }
-  if(LOWORD(wp)==150){MessageBoxW(wnd,L"KozDbg\n\nCreator: Ivan Kozlovsky\ncontact@ivankozlovsky.com\nivankozlovsky.com\n\nOpen source - MIT License\nProfiles: editable INI presets\nImplementation: C++ source",L"About KozDbg",MB_OK|MB_ICONINFORMATION);return TRUE;}
+  if(LOWORD(wp)==150){MessageBoxW(wnd,L"KozDbg x64\n\nCreator: Ivan Kozlovsky\ncontact@ivankozlovsky.com\nivankozlovsky.com\n\nOpen source - MIT License\nProfiles: editable INI presets\nImplementation: C++ source",L"About KozDbg x64",MB_OK|MB_ICONINFORMATION);return TRUE;}
   if(LOWORD(wp)==151){ShellExecuteW(wnd,L"open",L"notepad.exe",(L"\""+profilesPath+L"\"").c_str(),nullptr,SW_SHOWNORMAL);return TRUE;}
   if(LOWORD(wp)==IDCANCEL){EndDialog(wnd,0);return TRUE;}
   if(LOWORD(wp)==IDOK){
@@ -635,8 +635,8 @@ static void callback(CBTYPE type,void* info) {
  }
 }
 extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
- pluginHandle=init->pluginHandle;init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=101;
- strcpy_s(init->pluginName,"KozDbg");
+ pluginHandle=init->pluginHandle;init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=110;
+ strcpy_s(init->pluginName,"KozDbg x64");
  wchar_t file[MAX_PATH];GetModuleFileNameW(instance,file,MAX_PATH);iniPath=file;iniPath+=L".ini";logPath=file;logPath+=L".log";
  enabled=GetPrivateProfileIntW(L"Settings",L"Enabled",1,iniPath.c_str())!=0;
  autoArm=GetPrivateProfileIntW(L"Settings",L"AutoArm",1,iniPath.c_str())!=0;
@@ -657,7 +657,7 @@ extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
  _plugin_registercommand(pluginHandle,"kz_settings",settings,false);
  _plugin_registercommand(pluginHandle,"kz_status",status,false);
  for(auto t:{CB_MENUENTRY,CB_SYSTEMBREAKPOINT,CB_INITDEBUG,CB_STOPPINGDEBUG,CB_STOPDEBUG,CB_DETACH,CB_EXITPROCESS,CB_EXITTHREAD,CB_EXCEPTION,CB_DEBUGEVENT,CB_LOADDLL,CB_UNLOADDLL,CB_BREAKPOINT})_plugin_registercallback(pluginHandle,t,callback);
- log("Loaded v1.0.1 - 3.3.1 / 3.4.0 / 3.5.0 / 3.6 / 3.8.0 / 3.9.4 / 3.10.1 x64 profiles. Settings are in Plugins > KozDbg.");return true;
+ log("Loaded v1.1.0 - 3.3.1 / 3.4.0 / 3.5.0 / 3.6 / 3.8.0 / 3.9.4 / 3.10.1 x64 profiles. Settings are in Plugins > KozDbg.");return true;
 }
 extern "C" __declspec(dllexport) void plugsetup(PLUG_SETUPSTRUCT* setup){
  owner=setup->hwndDlg;

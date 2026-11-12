@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(KozCallbackTest LANGUAGES CXX)
+add_executable(callback_test WIN32 main.cpp)
+target_compile_features(callback_test PRIVATE cxx_std_17)
+target_link_libraries(callback_test PRIVATE user32)
+target_compile_options(callback_test PRIVATE /W4 /WX)
