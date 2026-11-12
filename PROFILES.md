@@ -101,9 +101,9 @@ Use `kz_profile 3101` to select a version, `kz_profile off` to disable it, and `
 
 ## Contact
 
-Ivan Kozlovsky  
-[ivankozlovsky.com](https://ivankozlovsky.com)  
-[contact@ivankozlovsky.com](mailto:contact@ivankozlovsky.com)  
+Ivan Kozlovsky
+[ivankozlovsky.com](https://ivankozlovsky.com)
+[contact@ivankozlovsky.com](mailto:contact@ivankozlovsky.com)
 [PGP public key](https://ivankozlovsky.com/pgp.asc)
 
 [MIT license](LICENSE)
