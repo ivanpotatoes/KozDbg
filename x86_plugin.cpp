@@ -579,13 +579,13 @@ static void callback(CBTYPE type,void* info){
  }}
 }
 extern "C" __declspec(dllexport) bool pluginit(PLUG_INITSTRUCT* init){
- init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=111;pluginHandle=init->pluginHandle;strcpy_s(init->pluginName,"KozDbg x32");
+ init->sdkVersion=PLUG_SDKVERSION;init->pluginVersion=112;pluginHandle=init->pluginHandle;strcpy_s(init->pluginName,"KozDbg x32");
  std::vector<wchar_t> path(32768);const DWORD size=GetModuleFileNameW(instance,path.data(),static_cast<DWORD>(path.size()));if(!size||size>=path.size())return false;iniPath.assign(path.data(),size);iniPath+=L".ini";
  enabled=GetPrivateProfileIntW(L"Settings",L"Enabled",1,iniPath.c_str())!=0;automatic=GetPrivateProfileIntW(L"Settings",L"AutoArm",1,iniPath.c_str())!=0;profile=GetPrivateProfileIntW(L"Settings",L"Profile",331,iniPath.c_str());if(!findProfile(profile))profile=331;options=profileOptions(profile);
  if(!_plugin_registerexprfunction(pluginHandle,"kz32_native",1,nativeCondition,nullptr))return false;
  _plugin_registercommand(pluginHandle,"kz_apply",apply,false);_plugin_registercommand(pluginHandle,"kz_status",status,false);_plugin_registercommand(pluginHandle,"kz_settings",settings,false);_plugin_registercommand(pluginHandle,"kz_profile",select,false);_plugin_registercommand(pluginHandle,"kz32_config",configure,false);_plugin_registercommand(pluginHandle,"kz32_hit",hit,true);
  for(auto type:{CB_MENUENTRY,CB_SYSTEMBREAKPOINT,CB_INITDEBUG,CB_STOPPINGDEBUG,CB_STOPDEBUG,CB_DETACH,CB_EXITTHREAD,CB_EXCEPTION,CB_DEBUGEVENT})_plugin_registercallback(pluginHandle,type,callback);
- log("x32 backend loaded v1.1.1. Profiles 360/380/394/3101 WOW64 support is enabled. x64 INI files are not used.");return true;
+ log("x32 backend loaded v1.1.2. Profiles 360/380/394/3101 WOW64 support is enabled. x64 INI files are not used.");return true;
 }
 extern "C" __declspec(dllexport) void plugsetup(PLUG_SETUPSTRUCT* setup){
  owner=setup->hwndDlg;
