@@ -8,7 +8,7 @@ An anti-anti-debug plugin for **x64dbg and x32dbg**, built from my research into
 
 **x64 and x32 | Separate version profiles | No kernel driver | MIT license**
 
-[Download](https://github.com/ivanpotatoes/KozDbg/releases/latest) · [Demo](https://www.youtube.com/watch?v=r7Q8KtjtaA0) · [Profile format](PROFILES.md) · [Report a bug](https://github.com/ivanpotatoes/KozDbg/issues)
+[Download](https://github.com/ivanpotatoes/KozDbg/releases/latest) · [x64 demo](https://www.youtube.com/watch?v=r7Q8KtjtaA0) · [x32 demo](https://www.youtube.com/watch?v=VaEJDaibNfY) · [Profile format](PROFILES.md) · [Report a bug](https://github.com/ivanpotatoes/KozDbg/issues)
 
 ![KozDbg settings](media/screenshots/settings.png)
 
@@ -95,9 +95,19 @@ The x64 build counts repeated plugin information messages instead of flooding th
 
 ## Demo
 
-This video shows the **x64 build**. Three small programs, **BasicProbe**, **RiddleGame** and **KeyCheck**, are protected with different VMProtect versions and then run in x64dbg with KozDbg. Click the thumbnail to watch.
+Click a thumbnail to watch on YouTube.
 
-[![Watch the KozDbg demo](https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg)](https://www.youtube.com/watch?v=r7Q8KtjtaA0)
+### x64 demo
+
+BasicProbe, RiddleGame and KeyCheck protected with different VMProtect versions, then run in x64dbg with KozDbg.
+
+[![Watch the KozDbg x64 demo](https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg)](https://www.youtube.com/watch?v=r7Q8KtjtaA0)
+
+### x32 demo
+
+KozDbg running in x32dbg with 32-bit programs.
+
+[![Watch the KozDbg x32 demo](https://img.youtube.com/vi/VaEJDaibNfY/hqdefault.jpg)](https://www.youtube.com/watch?v=VaEJDaibNfY)
 
 ## Build from source
 
