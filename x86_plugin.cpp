@@ -499,7 +499,17 @@ static void callback(CBTYPE type,void* info){
     if(nativeHardwareStepThread==event->dwThreadId){
      if(stepRecord.ExceptionCode==EXCEPTION_SINGLE_STEP){
       nativeHardwareStepThread=0;
-      if((c.d(56)&0xffff)==0x33){c.d(68,c.d(68)&~0x100u);if(!KozWow64::set(thread,c))log("Cannot finish native hardware step");}
+      if((c.d(56)&0xffff)==0x33){
+       const bool internalStep=(c.q(104)&0x4000)&&!(c.q(104)&0xf);
+       c.d(68,c.d(68)&~0x100u);
+       if(!KozWow64::set(thread,c))log("Cannot finish native hardware step");
+       else if(internalStep&&event->u.Exception.dwFirstChance){
+        nativeGuardThread=event->dwThreadId;
+        nativeGuardIp=reinterpret_cast<duint>(stepRecord.ExceptionAddress);
+        nativeGuardCode=stepRecord.ExceptionCode;
+        log("Completed plugin-owned native hardware step at %llX",c.q(248));
+       }
+      }
      }
      CloseHandle(thread);return;
     }
