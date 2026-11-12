@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(KozAttachTest LANGUAGES CXX)
+add_executable(attach_test WIN32 main.cpp)
+target_compile_features(attach_test PRIVATE cxx_std_17)
+target_compile_options(attach_test PRIVATE /W4 /WX)
+target_link_libraries(attach_test PRIVATE user32)

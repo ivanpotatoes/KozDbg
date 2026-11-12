@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(KozX86AbiTests LANGUAGES CXX)
+add_executable(x86_abi_tests test.cpp)
+target_compile_features(x86_abi_tests PRIVATE cxx_std_17)
+target_compile_options(x86_abi_tests PRIVATE /W4 /WX)
