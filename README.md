@@ -1,115 +1,149 @@
+<div align="center">
+
+<img src="assets/kozdbg.png" width="64" height="64" alt="KozDbg icon">
+
 # KozDbg
 
-An anti-anti-debug plugin for **x64dbg and x32dbg**, built from my research into VMProtect's anti-debug checks. It supports the tested versions from **3.3.1 to 3.10.1**, with a separate profile for each version.
+**VMProtect anti-anti-debug for x64dbg and x32dbg**
 
-> **No kernel driver required — including the VMProtect 3.10.1 profile.**
->
-> Both builds run entirely in user mode, including the 3.10.1 profiles. Supported kernel-debugger queries are handled from user mode too, without installing or loading a driver.
+Separate profiles for VMProtect **3.3.1–3.10.1**. Runs entirely in user mode.
 
-**x64 and x32 | Separate version profiles | No kernel driver | MIT license**
+![Architecture](https://img.shields.io/badge/x64_%2B_x32-30363d?style=flat-square) ![Driver](https://img.shields.io/badge/kernel_driver-not_required-2563eb?style=flat-square) [![Release](https://img.shields.io/github/v/release/ivanpotatoes/KozDbg?style=flat-square&color=2563eb)](https://github.com/ivanpotatoes/KozDbg/releases/latest)
 
-[Download](https://github.com/ivanpotatoes/KozDbg/releases/latest) · [x64 demo](https://www.youtube.com/watch?v=r7Q8KtjtaA0) · [x32 demo](https://www.youtube.com/watch?v=VaEJDaibNfY) · [Profile format](PROFILES.md) · [Report a bug](https://github.com/ivanpotatoes/KozDbg/issues)
+[**Download**](#download) · [Setup](#setup) · [Tested versions](#tested-versions) · [Demos](#demos) · [Research](#research-behind-kozdbg)
 
-![KozDbg settings](media/screenshots/settings.png)
+<br>
 
-## Getting started
+<img src="media/screenshots/settings.png" width="562" alt="KozDbg settings with version profiles and individual anti-debug options">
 
-Use **x64dbg** for 64-bit programs and **x32dbg** for 32-bit programs. Match the plugin to the debugger:
+</div>
 
-| Debugger | Plugin | Settings |
-|---|---|---|
-| x64dbg | `KozDbg.dp64` | `KozDbg.dp64.ini` and `KozDbg.dp64.ini.profiles.ini` |
-| x32dbg | `KozDbg.dp32` | `KozDbg.dp32.ini` |
+<br>
 
-**v1.1.2 includes both builds.** Download [KozDbg-v1.1.2-x64.zip](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.2/KozDbg-v1.1.2-x64.zip) or [KozDbg-v1.1.2-x32.zip](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.2/KozDbg-v1.1.2-x32.zip). Each ZIP includes the matching plugin and default INI files. When updating, keep your existing INI files.
+I built KozDbg from my research into VMProtect's anti-debug checks. Select the version profile before loading your program, then run it under the debugger. Addresses and syscall numbers are resolved in the target; the profiles do not depend on sample names or fixed addresses.
 
-1. Close the debugger and place the matching plugin in its `plugins` folder, beside `x64dbg.exe` or `x32dbg.exe`.
-2. Open the debugger. Under **Plugins > KozDbg x64** or **KozDbg x32**, select the VMProtect version.
-3. Leave **Auto-enable** checked and load the protected executable.
-4. At the system breakpoint, check the log for `profile armed`, then press **F9**. If the debugger stops at the entry breakpoint, press **F9** again.
+**No kernel driver is needed, including for 3.10.1 on both architectures.** Supported kernel-debugger queries are handled from user mode.
 
-Settings files are created when needed. The default profile is **3.3.1**. Select the profile before running the target; changing it after detection has already happened will not undo that result. If setup fails, check the log.
+## Download
 
-**Updating:** replace only the matching `.dp64` or `.dp32` file while the debugger is closed. Keep your existing INI files. The two builds use separate settings; do not rename an x64 INI to use it with x32.
+| Target program | Package | Debugger |
+| :--- | :--- | :--- |
+| 64-bit | [**KozDbg v1.1.2 · x64**](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.2/KozDbg-v1.1.2-x64.zip) | x64dbg |
+| 32-bit | [**KozDbg v1.1.2 · x32**](https://github.com/ivanpotatoes/KozDbg/releases/download/v1.1.2/KozDbg-v1.1.2-x32.zip) | x32dbg |
 
-## Supported and tested versions
+Both packages include the plugin and default INI files. **Updating? Close the debugger, replace the plugin and keep your existing INI files.**
 
-| VMProtect | Profile | x64 / x64dbg | x32 / x32dbg |
-|---|---|---|---|
-| 3.3.1 | `331` | Tested - passed | Tested - passed |
-| 3.4.0 | `340` | Tested - passed | Tested - passed |
-| 3.5.0 | `350` | Tested - passed | Tested - passed |
-| 3.6.0 | `360` | Tested - passed | Tested - passed |
-| 3.8.0 | `380` | Tested - passed | Tested - passed |
-| 3.9.4 | `394` | Tested - passed | Tested - passed |
-| 3.10.1 | `3101` | Tested - passed | Tested - passed |
+## Setup
 
-**All seven versions listed above were tested on both architectures.** Each has its own selectable profile.
+1. Close the debugger. Copy the matching package into its `plugins` folder, beside `x64dbg.exe` or `x32dbg.exe`.
+2. Open **Plugins → KozDbg x64** or **Plugins → KozDbg x32** and select the VMProtect version.
+3. Leave **Auto-enable** checked, then load the protected executable.
+4. At the system breakpoint, look for `profile armed` in the log and press **F9**. If it stops at the entry breakpoint, press **F9** again.
 
-The x64 tests used the protected test programs from the research. The x32 tests used RiddleGame protected with each listed version, including additional protection options. The GUI opens after startup without manual bypass patches. The 3.9.4 and 3.10.1 x32 runs also passed answer submission, Pause/Resume and user hardware-breakpoint checks.
+The default profile is **3.3.1**. Choose the profile before running the target. If setup fails, read the log before continuing; changing profiles after a detection will not undo it.
 
-The x32 backend was tested under WOW64 on 64-bit Windows. These results cover the supplied test programs, not every protected binary or every intermediate VMProtect build.
+<details>
+<summary><strong>Settings files</strong></summary>
 
-## What the plugin does
+| Build | Plugin | Settings |
+| :--- | :--- | :--- |
+| x64 | `KozDbg.dp64` | `KozDbg.dp64.ini` and `KozDbg.dp64.ini.profiles.ini` |
+| x32 | `KozDbg.dp32` | `KozDbg.dp32.ini` |
 
-KozDbg handles the supported checks from user mode, including queries about kernel debugger state. It does not install a driver.
+Settings files are created when needed. Each build has its own settings format; do not rename an x64 INI to use it with x32.
 
-Depending on the selected profile, it covers:
+</details>
 
-- PEB debugger flags, remote debugger and debug object queries
-- Thread hiding, kernel debugger queries and driver-name checks
-- Invalid handles, trap-flag exceptions and saved debug registers
-- Instrumentation callback clearing and remote-breakin protection
-- TitanHide device checks in the later profiles
+## Tested versions
 
-API addresses and syscall numbers are resolved in the target process. Profiles are not tied to the sample programs or fixed protected-code addresses.
+| VMProtect | Profile | x64 | x32 |
+| :--- | :---: | :---: | :---: |
+| 3.3.1 | `331` | Passed | Passed |
+| 3.4.0 | `340` | Passed | Passed |
+| 3.5.0 | `350` | Passed | Passed |
+| 3.6.0 | `360` | Passed | Passed |
+| 3.8.0 | `380` | Passed | Passed |
+| 3.9.4 | `394` | Passed | Passed |
+| 3.10.1 | `3101` | Passed | Passed |
 
-Packed programs are supported where the layout is recognized. The x64 decoder acceleration option can reduce startup time. The x32 WOW64 backend also uses hardware breakpoints and memory guards to follow native transitions; it needs a free hardware slot to observe the return. Existing user breakpoints are retained. Startup time depends on the code layout and available slots. Protection settings and code layout still matter, so please report samples that behave differently.
+All seven versions were tested on **both architectures**, with a separate profile for each. x32 was tested under WOW64 on 64-bit Windows.
 
-KozDbg handles anti-debug checks. Unpacking, devirtualization, application key checks and anti-VM checks are outside its scope.
+<details>
+<summary><strong>What the tests cover</strong></summary>
 
-## Profiles and controls
+The x64 tests used the protected programs from the research. The x32 tests used RiddleGame protected with each listed version, including additional protection options. The GUI opens without manual bypass patches.
 
-You can select a profile directly from the menu without opening Settings.
+The 3.9.4 and 3.10.1 x32 runs also passed answer submission, Pause/Resume and user hardware-breakpoint checks. These results cover the tested programs and configurations, not every intermediate VMProtect build.
 
-![KozDbg profiles menu](media/screenshots/profiles-menu.png)
+</details>
 
-In Settings, hover over the **?** beside an option to see what it does. Unsupported controls are greyed out for that profile. **Save & apply** saves the selected options and applies them; pause the target first if it is already running.
+## Checks and profiles
 
-On **x64**, to create a preset, open **Profiles INI**, copy an existing section and give it a unique ID and name. Restart x64dbg to load it. See [PROFILES.md](PROFILES.md) for an example and the available engines.
+The selected profile determines which handlers are available:
 
-On **x32**, **Profiles INI** opens `KozDbg.dp32.ini`. The seven built-in version profiles have separate option sections. Custom named profiles are currently an x64 feature.
+| Area | Handled checks |
+| :--- | :--- |
+| Debugger state | PEB flags, remote debugger and debug object queries |
+| Threads and exceptions | Thread hiding, invalid handles and trap-flag exceptions |
+| Saved context | Debug registers and instrumentation callback clearing |
+| Kernel-related queries | Kernel debugger state, driver names and later TitanHide device checks |
+| Attach protection | Remote-breakin protection |
 
-INI profiles select options in the existing implementation. A new detection technique needs a C++ change, not just another profile name.
+Select a profile from the menu without opening Settings. Hover over **?** beside an option for its explanation. Unavailable options are greyed out.
+
+<p align="center">
+  <img src="media/screenshots/profiles-menu.png" width="220" alt="KozDbg profile selection menu">
+</p>
+
+**Save & apply** saves your choices and applies them. Pause an already running target first.
+
+On **x64**, open **Profiles INI**, copy an existing section and give it a unique ID and name. Restart x64dbg to load it. [The profile guide](PROFILES.md) describes the format and engines. On **x32**, the same button opens `KozDbg.dp32.ini`, with separate option sections for the seven built-in profiles. Custom named profiles are an x64 feature.
+
+Profiles configure the existing handlers. Supporting a new detection technique requires a code change.
+
+<details>
+<summary><strong>Commands</strong></summary>
 
 | Command | Action |
-|---|---|
+| :--- | :--- |
 | `kz_settings` | Open Settings |
 | `kz_profile 331` | Select VMProtect 3.3.1 |
-| `kz_profile MyProfile` | Select your own preset (x64) |
+| `kz_profile MyProfile` | Select a custom preset on x64 |
 | `kz_profile off` | Disable KozDbg |
-| `kz_apply` | Apply the selected profile while paused |
-| `kz_status` | Show the current state and counters |
+| `kz_apply` | Apply the profile while paused |
+| `kz_status` | Show state and counters |
 
-The x64 build counts repeated plugin information messages instead of flooding the log. The x32 backend currently records detailed call diagnostics. Errors are still printed. x64dbg's own exception logging is separate.
+</details>
 
-## Demo
+<details>
+<summary><strong>Packed programs, breakpoints and logging</strong></summary>
 
-Click a thumbnail to watch on YouTube.
+Packed programs are supported where their layout is recognized. The x64 decoder acceleration option can reduce startup time.
 
-### x64 demo
+The x32 WOW64 backend uses hardware breakpoints and memory guards to follow native transitions. It needs a free hardware slot to observe the return and retains existing user breakpoints. Startup time depends on the layout and available slots.
 
-BasicProbe, RiddleGame and KeyCheck protected with different VMProtect versions, then run in x64dbg with KozDbg.
+The x64 build counts repeated informational messages instead of repeatedly printing them. The x32 backend records detailed call diagnostics. Errors remain visible; the debugger's own exception logging is separate.
 
-[![Watch the KozDbg x64 demo](https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg)](https://www.youtube.com/watch?v=r7Q8KtjtaA0)
+KozDbg handles anti-debug checks. It does not unpack or devirtualize code, solve application key checks or handle anti-VM checks.
 
-### x32 demo
+</details>
 
-KozDbg running in x32dbg with 32-bit programs.
+## Demos
 
-[![Watch the KozDbg x32 demo](https://img.youtube.com/vi/VaEJDaibNfY/hqdefault.jpg)](https://www.youtube.com/watch?v=VaEJDaibNfY)
+The videos show protection setup, profile selection and the programs running under the debugger. Click either image to watch.
+
+<table>
+<tr><th>x64 · x64dbg</th><th>x32 · x32dbg</th></tr>
+<tr>
+<td><a href="https://www.youtube.com/watch?v=r7Q8KtjtaA0"><img src="https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg" width="380" alt="Watch the KozDbg x64 demo"></a></td>
+<td><a href="https://www.youtube.com/watch?v=VaEJDaibNfY"><img src="https://img.youtube.com/vi/VaEJDaibNfY/hqdefault.jpg" width="380" alt="Watch the KozDbg x32 demo"></a></td>
+</tr>
+</table>
 
 ## Build from source
+
+<details>
+<summary><strong>Requirements and build commands</strong></summary>
 
 Use Windows, Visual Studio 2022 with **Desktop development with C++**, CMake 3.20+ and the [x64dbg plugin SDK](https://github.com/x64dbg/x64dbg).
 
@@ -123,9 +157,18 @@ cmake -S . -B ../KozDbg-build-x32 -A Win32 -DX64DBG_SDK="C:/path/to/pluginsdk"
 cmake --build ../KozDbg-build-x32 --config Release
 ```
 
-The SDK folder must contain `_plugins.h` and the matching libraries: `x64dbg.lib` / `x64bridge.lib` or `x32dbg.lib` / `x32bridge.lib`. The outputs are `../KozDbg-build-x64/Release/KozDbg.dp64` and `../KozDbg-build-x32/Release/KozDbg.dp32`. Use separate build directories for the two architectures.
+The SDK must contain `_plugins.h` and the matching libraries: `x64dbg.lib` / `x64bridge.lib` or `x32dbg.lib` / `x32bridge.lib`.
 
-For bug reports, include your debugger build and architecture, VMProtect version, protection options, selected profile and the relevant KozDbg log. Mention whether the same program runs normally outside the debugger.
+Outputs:
+
+- `../KozDbg-build-x64/Release/KozDbg.dp64`
+- `../KozDbg-build-x32/Release/KozDbg.dp32`
+
+Keep separate build directories for the two architectures.
+
+</details>
+
+For [bug reports](https://github.com/ivanpotatoes/KozDbg/issues), include the debugger build and architecture, VMProtect version, protection options, selected profile and relevant log. Mention whether the program runs normally outside the debugger.
 
 ## Research behind KozDbg
 
@@ -135,9 +178,9 @@ For bug reports, include your debugger build and architecture, VMProtect version
 - [VMProtect 3.9.4 anti-debug analysis](https://ivankozlovsky.com/blog/vmprotect-394-anti-debug-analysis)
 - [VMProtect 3.10.1 anti-debug analysis](https://ivankozlovsky.com/blog/vmprotect-3101-anti-debug-analysis)
 
-## Author
+---
 
-**Ivan Kozlovsky** · [ivankozlovsky.com](https://ivankozlovsky.com) · [contact@ivankozlovsky.com](mailto:contact@ivankozlovsky.com) · [PGP](https://ivankozlovsky.com/pgp.asc)
+**Ivan Kozlovsky** · [Website](https://ivankozlovsky.com) · [Email](mailto:contact@ivankozlovsky.com) · [PGP](https://ivankozlovsky.com/pgp.asc)
 
 Released under the [MIT license](LICENSE).
 
