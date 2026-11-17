@@ -135,8 +135,8 @@ The videos show protection setup, profile selection and the programs running und
 <table>
 <tr><th>x64 · x64dbg</th><th>x32 · x32dbg</th></tr>
 <tr>
-<td><a href="https://www.youtube.com/watch?v=r7Q8KtjtaA0"><img src="https://img.youtube.com/vi/r7Q8KtjtaA0/hqdefault.jpg" width="380" alt="Watch the KozDbg x64 demo"></a></td>
-<td><a href="https://www.youtube.com/watch?v=VaEJDaibNfY"><img src="https://img.youtube.com/vi/VaEJDaibNfY/hqdefault.jpg" width="380" alt="Watch the KozDbg x32 demo"></a></td>
+<td><a href="https://ivankozlovsky.com/uploads/videos/VMProtect-anti-debug-bypass-test-example-video-x64.mp4"><img src="media/demo-x64-preview.jpg" width="380" alt="Watch the KozDbg x64 demo"></a></td>
+<td><a href="https://ivankozlovsky.com/uploads/videos/VMProtect-anti-debug-bypass-test-example-video-x32.mp4"><img src="media/demo-x32-preview.jpg" width="380" alt="Watch the KozDbg x32 demo"></a></td>
 </tr>
 </table>
 
